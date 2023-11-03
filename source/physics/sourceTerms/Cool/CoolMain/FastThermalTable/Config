@@ -1,0 +1,21 @@
+# Configuration file for fast table-based cooling
+
+PARAMETER useCool   			BOOLEAN  	TRUE  
+PARAMETER cl_functionFile  STRING   	"apec.dat"
+
+D cl_m       mean mass per nucleon
+PARAMETER cl_m        REAL  1.
+
+D cl_nnh       total nucleon density over H density
+PARAMETER cl_nnh        REAL  1.1
+
+D cl_Tcut    lower temperature cutoff for cooling
+PARAMETER cl_Tcut    REAL 0.0
+
+D useChi     switch for whether to read and use chi in the cooling calc
+PARAMETER  useChi  BOOLEAN TRUE
+
+REQUIRES flashUtilities/interpolation/oneDim
+
+VARIABLE cool TYPE: PER_VOLUME # cooling rate
+

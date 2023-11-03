@@ -1,0 +1,4 @@
+#  Configuration file for short-range active particle forces
+# [/source/Particles/ParticleForces/shortRange]
+
+DEFAULT drag

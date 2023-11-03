@@ -1,0 +1,16 @@
+REQUIRES Grid/GridMain/paramesh/interpolation/prolong
+
+# Define a symbol to signal that monotonic interpolation
+# routines are compiled in:
+PPDEFINE GRID_WITH_MONOTONIC
+
+# Define a symbol to signal that guardcell layers can
+# only be given in multiples of two: 
+PPDEFINE GRID_GC_LAYERS_ALWAYS_EVEN
+
+# We can define here a symbol to signal to morton_bnd that
+# the fetchlist constructed there can be optimized.
+# However, this is commented out for FLASH 4.6.1 since it
+# was found that this optimiziation may cause rare
+# communication errors at run time.
+## PPDEFINE PM_OPTIMIZE_MORTONBND_FETCHLIST

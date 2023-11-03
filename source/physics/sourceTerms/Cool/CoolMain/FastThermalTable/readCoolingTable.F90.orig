@@ -1,0 +1,64 @@
+!*******************************************************************************
+!
+! Routine:      readThermalTable
+!
+! Description:  Reads in a computed ascii table derived from the APEC model.
+!
+! Changed 1/9/2018 by JDS - now allow for comments in the table if the lines 
+! begin with # and are at the beginning of the file.
+
+subroutine readThermalTable(Nt)
+
+!===============================================================================
+
+  use Cool_data, ONLY: cl_Nmax, cl_T, cl_lambda, cl_Nt, cl_functionFile
+
+  implicit none
+
+  integer, intent(out) :: Nt
+  
+  integer :: i, status
+  character(len=72) :: line
+  
+  !===============================================================================
+  
+  ! First, determine whether the file can be opened and has the right format.
+  
+  open (1, file=cl_functionFile(1:len_trim(cl_functionFile)), iostat=status)
+  if (status /= 0) then
+     Nt = -1
+     return
+  endif
+  
+  Nt = 0
+  do while (.true.)
+      read(1,fmt='(A72)',iostat=status) line
+      if (status == -1) exit
+      if (status > 0) then
+          Nt = -1
+          close(1)
+          return
+      endif
+      if (line(1:1) .ne. '#') then
+          read(line, '(I4)') Nt
+          exit
+      endif
+  enddo
+
+  if ((Nt == 0) .or. (Nt > cl_Nmax)) then
+     Nt = -1
+     close(1)
+     return
+  endif
+
+  do i = 1, Nt
+     read (1,*) cl_T(i), cl_lambda(i)
+  enddo
+  close(1)
+
+  cl_Nt = Nt
+  
+  !===============================================================================
+  
+  return
+end subroutine readThermalTable

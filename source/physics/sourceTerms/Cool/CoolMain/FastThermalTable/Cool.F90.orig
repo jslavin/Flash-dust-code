@@ -1,0 +1,255 @@
+!!****if* source/physics/sourceTerms/Cool/CoolMain/APEC/Cool
+!!
+!! NAME
+!!
+!!  Cool
+!!
+!! SYNOPSIS
+!!
+!!  Cool(integer,intent(IN)  :: blockcount,
+!!       integer,dimension(blockCount), intent(IN)  :: blocklist,
+!!       real,intent(IN)  :: dt,
+!!       real,intent(IN)  :: time)
+!!
+!! DESCRIPTION
+!!     Implementation of the integration scheme by R. H. D. Townsend as a means
+!!     of calculating the radiative cooling (ApJS 181, 391).
+!!     Initial version by John Zuhone
+!!
+!! ARGUMENTS
+!!
+!!   blockcount : 
+!!
+!!   blocklist : 
+!!
+!!   dt : 
+!!
+!!   time : 
+!!
+!! AUTOGENROBODOC
+!!
+!!
+!!***
+
+
+subroutine Cool (blockCount, blockList, dt, time)
+
+!==============================================================================
+  use Cool_data, ONLY: cl_Nmax, cl_Zbar, &
+       cl_Nt, cl_Abar, useCool, cl_rho, cl_gamma, cl_smalle, cl_meshMe, &
+       cl_boltzmann, cl_AMU, cl_Xin  
+  use Grid_interface, ONLY : Grid_getBlkPtr, Grid_getBlkIndexLimits, &
+       Grid_releaseBlkPtr, Grid_getDeltas
+  use Eos_interface, ONLY : Eos_wrapped
+  use Multispecies_interface, ONLY : Multispecies_getSumInv, &
+       Multispecies_getSumFrac
+
+  implicit none
+
+#include "constants.h"
+#include "Flash.h"
+#include "Multispecies.h"
+#include "Flash_mpi.h"
+  
+  integer,intent(IN)  :: blockCount
+  integer,dimension(blockCount), intent(IN) :: blockList
+  real,intent(IN) :: dt, time
+
+  real,pointer,dimension(:,:,:,:) :: solnData
+  integer, dimension(2,MDIM) :: blkLimits, blkLimitsGC
+  integer :: blockID
+  real            :: dtmin, dtguess, t, abund, lcentral_cool, central_cool
+  real            :: eid, eidold, ei, ek, dedt, rr, logr, de
+  integer         :: i, j, k, nok, nbad, lb, ir, ierr
+  real            :: cellVolume, cellCool
+  real,allocatable, dimension(:) :: xCenter, yCenter, zCenter
+  integer,dimension(MDIM)  :: dimSize
+  logical :: gcell = .true.
+  real,dimension(MDIM) :: del
+  
+  ! Stuff for ODE solve
+  real                  :: t1, t2, dt_alt
+  
+  external cool_advance
+
+!==============================================================================
+  if(.not.useCool) return
+  
+  do lb = 1, blockCount
+!!DEV: blockList(blockCount) in the next 2 lines looks really wrong - KW
+     blockID=blockList(lb)
+     call Grid_getBlkPtr(blockID,solnData)
+     call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
+     do k = blkLimits(LOW,KAXIS), blkLimits(HIGH,KAXIS)
+        do j = blkLimits(LOW,JAXIS), blkLimits(HIGH,JAXIS)
+           do i = blkLimits(LOW,IAXIS), blkLimits(HIGH,IAXIS)
+              cl_rho = solnData(DENS_VAR,i,j,k)
+              eid    = cl_rho * solnData(EINT_VAR,i,j,k)
+              eidold = eid
+                 
+              cl_gamma  = solnData(GAME_VAR,i,j,k) 
+ 
+#if NSPECIES > 0
+                  cl_Xin    = solnData(SPECIES_BEGIN:SPECIES_BEGIN+NSPECIES-1,i,j,k)
+                  call Multispecies_getSumInv(A,cl_Abar,cl_Xin(:))
+                  cl_Abar = 1.e0 / cl_Abar
+                  call Multispecies_getSumFrac(Z,cl_Zbar,cl_Xin(:))
+                  cl_Zbar = cl_Abar*cl_Zbar
+#endif
+
+              call cool_advance(eid, cl_rho, dt)
+
+              solnData(COOL_VAR,i,j,k) = (eid - eidold)/dt
+
+           enddo
+        enddo
+     enddo
+
+     call Grid_releaseBlkPtr(blockID,solnData)
+  end do
+  !===============================================================================
+
+  ! Now we update the internal and total energies
+
+  do lb = 1, blockCount
+     blockID=blockList(lb)
+     call Grid_getBlkPtr(blockID,solnData)
+     call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
+     do k = blkLimits(LOW,KAXIS), blkLimits(HIGH,KAXIS)
+        do j = blkLimits(LOW,JAXIS), blkLimits(HIGH,JAXIS)
+           do i = blkLimits(LOW,IAXIS), blkLimits(HIGH,IAXIS)
+              cl_rho = solnData(DENS_VAR,i,j,k)
+              eid    = cl_rho * solnData(EINT_VAR,i,j,k)
+              ek     = 0.5*(solnData(VELX_VAR,i,j,k)**2 + &
+                   solnData(VELY_VAR,i,j,k)**2 + &
+                   solnData(VELZ_VAR,i,j,k)**2)
+              de = solnData(COOL_VAR,i,j,k)*dt
+              eid = eid + de
+              ei = max(eid/cl_rho, cl_smalle)   
+              solnData(ENER_VAR,i,j,k) = ei + ek                                                                                               
+              solnData(EINT_VAR,i,j,k) = ei                                                                                                    
+           enddo
+        enddo
+     enddo
+     ! Make all thermodynamic quantities consistent with each other.                                                                           
+     call Eos_wrapped(MODE_DENS_EI,blkLimits,blockID)
+     call Grid_releaseBlkPtr(blockID,solnData)
+  enddo
+
+  return
+end subroutine Cool
+
+subroutine cool_advance(e, dens, dt)
+
+!===============================================================================
+
+  use Cool_data, ONLY : cl_T, cl_gamma, cl_boltzmann, cl_Abar, cl_chi, cl_Tref, &
+       cl_lambda, cl_Y, cl_Nt, cl_Zbar, cl_AMU, cl_X, cl_smalle, cl_lambdaTref, &
+       cl_alpha
+
+  use ut_interpolationInterface, ONLY: ut_hunt
+ 
+  implicit none
+  
+  real, intent(IN)       :: dens, dt
+  real, intent(INOUT)    :: e
+    
+  integer            :: j, err
+  real               :: ne, nH, T, Yold, Ynew, tcool, lambdaT, efrac
+
+  real, external :: Yfunc, Tfunc
+  logical :: lowT
+
+  !------------------------------------------------------------------------------
+    
+  if (e < dens*cl_smalle) then
+     return
+  endif
+
+  efrac = 0.0001
+  ! OK, find our spot in the table.
+  
+  T = cl_Abar/cl_chi*(cl_gamma-1.)*cl_AMU*(e/dens)/cl_boltzmann
+  ! If cl_Abar = m in amu then this assumes that chi is 1
+  ! If cl_Abar = m/chi (m in amu) then we can assume a different chi - which
+  ! is then combined with m to define Abar (i.e. eos_singleSpecisA)
+  if (T .lt. 8000.) then
+      ! for low T we assume chi = 1
+      T = cl_Abar*(cl_gamma-1.)*cl_AMU*(e/dens)/cl_boltzmann
+      lowT = .true.
+  else
+      lowT = .false.
+  endif
+
+  call ut_hunt(cl_T, cl_Nt, T, j)
+
+  ! Compute the cooling rate.
+  
+  !ne = 0.5*(1.+cl_X)*dens/cl_AMU
+  !nH = cl_X*dens/cl_AMU
+  ! assume 10% He by number
+  nH = dens/(1.1*cl_Abar*cl_AMU)
+  if ( lowT ) then
+      ne = nH * efrac
+  else
+      ne = 1.1*nH*(cl_chi - 1.)
+  endif
+     
+  if (j > 0 .and. j < cl_Nt) then
+     lambdaT = cl_lambda(j)*(T/cl_T(j))**cl_alpha(j)
+     tcool = e/(nH*nH*lambdaT)
+     Yold = Yfunc(T, j)
+     Ynew = Yold + (T/cl_Tref)*(cl_lambdaTref/lambdaT)*dt/tcool
+     T = Tfunc(Ynew, j)
+     if ( lowT ) then
+         e = dens*cl_boltzmann*T/((cl_gamma-1.)*cl_Abar*cl_AMU)
+     else
+         e = dens*cl_boltzmann*cl_chi*T/((cl_gamma-1.)*cl_Abar*cl_AMU)
+     endif
+
+  endif
+  
+  !===============================================================================
+  
+  return
+end subroutine cool_advance
+
+function Yfunc(T, j)
+
+  use Cool_data, ONLY: cl_T, cl_alpha, cl_Nt, cl_Y, cl_lambda, &
+       cl_lambdaTref, cl_Tref
+
+  implicit none
+
+  real, intent(IN) :: T
+  integer, intent(IN) :: j
+
+  real :: Yfunc
+
+  Yfunc = cl_Y(j) + (1.0/(1.0-cl_alpha(j))) * &
+       (cl_lambdaTref/cl_lambda(j))*(cl_T(j)/cl_Tref) * &
+       (1.-(cl_T(j)/T)**(cl_alpha(j)-1.))
+
+  return
+
+end function Yfunc
+
+function Tfunc(Y, j)
+	
+  use Cool_data, ONLY: cl_T, cl_alpha, cl_Nt, cl_Y, cl_lambda, &
+       cl_lambdaTref, cl_Tref
+
+  implicit none
+
+  real, intent(IN) :: Y
+  integer, intent(IN) :: j
+
+  real :: Tfunc
+	
+  Tfunc = cl_T(j)*(1.0-(1.0-cl_alpha(j))*(cl_lambda(j)/cl_lambdaTref) * &
+  	  (cl_Tref/cl_T(j))*(Y-cl_Y(j)))**(1.0/(1.0-cl_alpha(j)))
+		
+  return
+	
+end function Tfunc
+

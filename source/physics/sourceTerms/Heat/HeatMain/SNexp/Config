@@ -1,0 +1,5 @@
+# Confg file for heating via SN explosion
+
+REQUIRES Driver
+
+PARAMETER useHeat   BOOLEAN  TRUE

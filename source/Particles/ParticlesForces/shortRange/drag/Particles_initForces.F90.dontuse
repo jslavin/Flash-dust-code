@@ -1,0 +1,27 @@
+!!****f* source/Particles/Particles_initForces
+!!
+!! NAME
+!!
+!!  Particles_initForces
+!!
+!! SYNOPSIS
+!!
+!!  call Particles_initForces()
+!!
+!! DESCRIPTION
+!!
+!!  When Active particles are being used for a simulation, this 
+!!  routine will calculate the long range and short range forces
+!!  caused by the gravity at initialization.
+!!
+!!***
+
+subroutine Particles_initForces()
+
+    use Simulation_data, ONLY : sim_dustdata, sim_yielddata, sim_yieldintdata
+
+    implicit none
+
+    call pt_yieldInit(trim(sim_dustdata),trim(sim_yielddata), &
+        trim(sim_yieldintdata))
+end subroutine Particles_initForces

@@ -1,0 +1,12 @@
+# Config file for the Heat code unit
+
+# available implementations are
+
+# StatPlusGauss (stat+gauss, not included in the regular FLASH code release)
+# Neutrino
+# NiCoRadioactiveDecay (not included in the FLASH 4.3 code release)
+
+REQUIRES Driver
+
+DEFAULT StatPlusGauss
+

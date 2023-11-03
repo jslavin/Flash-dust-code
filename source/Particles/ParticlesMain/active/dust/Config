@@ -1,0 +1,8 @@
+# adapted from the Config file in 
+# Particles/ParticlesMain/active/charged/HybridPIC/
+REQUIRES Particles/ParticlesMapping/Quadratic
+
+REQUIRES flashUtilities/rng
+
+VARIABLE pden TYPE: PER_VOLUME   # grid mass density [g/cm^3]
+

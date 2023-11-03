@@ -1,0 +1,25 @@
+# /bin/sh
+#
+#$ -S /bin/sh
+#$ -q mThC.q@@mlx5-hosts
+#$ -cwd -j y -N CLIC -o clic_run.log
+#$ -pe orte 128
+#$ -m abe -M jslavin@cfa.harvard.edu
+#
+echo + `date` job $JOB_NAME started in $QUEUE with jobID=$JOB_ID on $HOSTNAME
+echo + NSLOTS = $NSLOTS distributed over:
+cat $PE_HOSTFILE
+#
+module load intel/21/mvapich
+export PATH=$PATH:/home/jslavin/.local/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/jslavin/.local/hdf5-mvapich/lib
+
+trap "warn xcpu" SIGXCPU
+trap "warn usr1" SIGUSR1
+trap "warn kill" SIGKILL
+#
+/home/jslavin/.local/bin/flmake run -m 'a short run (after 2nd explosion) like
+26fa82b3, now with fix to Particles_shortRangeForce so that input edens to
+pt_grain_pot is correct' -n $NSLOTS
+#
+echo = `date` job $JOB_NAME done

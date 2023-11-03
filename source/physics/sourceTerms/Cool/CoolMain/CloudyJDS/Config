@@ -1,0 +1,24 @@
+# Configuration file for Cloudy table-based cooling
+
+# cl_functionFile          Name of file to take cooling curve data from
+
+PARAMETER cl_functionFile   STRING   "heatcoolcurve.txt"
+PARAMETER useCool   BOOLEAN  TRUE    
+D dtcoolmin      minimum value for cooling time
+PARAMETER dtcoolmin REAL 1.E6
+
+REQUIRES flashUtilities/interpolation/oneDim
+
+D cl_m      mean mass per particle (= rho/n) in g
+PARAMETER cl_m  REAL 2.126E-24
+
+D cl_nnH       ratio of total nucleons to H atoms
+PARAMETER cl_nnH REAL 1.1
+
+D cl_Tcut      log of low temperature cutoff for cooling
+PARAMETER cl_Tcut REAL 1.
+
+D useHeat  logical variable indicates if heating is included as well as cooling
+PARAMETER cl_useHeat BOOLEAN TRUE
+
+VARIABLE COOL  # net heating rate (or negative of cooling rate) = de/dt

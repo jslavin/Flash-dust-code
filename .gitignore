@@ -6,6 +6,7 @@ NOTES.particle_loss
 NOTES.runs
 coll_heatrate.idl
 Lcool_ion_slavin.tbl
+run_flash
 *.save
 seed_test*
 *.AdamsBash

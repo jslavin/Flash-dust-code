@@ -9,7 +9,8 @@ Particles += pt_interface.o pt_initPositions.o pt_initPositionsLattice.o \
 	pt_advanceEuler_passive.o pt_advanceMidpoint.o \
 	pt_advanceEsti.o pt_advanceEuler_active.o \
 	pt_advanceLeapfrog.o pt_advanceLeapfrog_cosmo.o \
-	pt_advanceCharged.o pt_advanceCustom.o pt_findTagOffset.o 
+	pt_advanceCharged.o pt_advanceCustom.o pt_findTagOffset.o \
+	pt_advanceDust_AB.o pt_advanceDust.o
 
 Particles += pt_utFakeParticlesAdvance.o pt_utUpdateAnaPosns.o \
 	pt_utAnaGetNewPosComponents.o pt_utComputeError.o 

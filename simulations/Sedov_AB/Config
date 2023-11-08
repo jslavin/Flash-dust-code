@@ -1,0 +1,161 @@
+#       Configuration file for the Sedov explosion problem
+#       (Sedov, L. I., 1959, Similarity and Dimensional Methods
+#       in Mechanics [New York:  Academic])
+
+REQUIRES Driver
+REQUIRES physics/Hydro
+REQUIRES physics/Eos
+REQUIRES physics/Eos/EosMain/Gamma
+REQUIRES physics/materialProperties/Conductivity/ConductivityMain/PowerLaw
+REQUESTS physics/Diffuse/DiffuseMain/Unsplit
+
+# if we want to use particles then we must specify "withParticles=True" as an
+# argument to setup
+USESETUPVARS withParticles
+
+IF withParticles
+   PARTICLETYPE active INITMETHOD custom MAPMETHOD quadratic ADVMETHOD dust_AB
+   PARTICLEPROP mass REAL
+# this is the dust grain solid material density
+   PARTICLEPROP dens REAL
+   PARTICLEPROP gvlx REAL
+   PARTICLEPROP gvly REAL
+   PARTICLEPROP gvlz REAL 
+   PARTICLEPROP opsx REAL
+   PARTICLEPROP opsy REAL
+   PARTICLEPROP opsz REAL 
+   PARTICLEPROP ovlx REAL
+   PARTICLEPROP ovly REAL
+   PARTICLEPROP ovlz REAL 
+   PARTICLEPROP oacx REAL
+   PARTICLEPROP oacy REAL
+   PARTICLEPROP oacz REAL 
+   PARTICLEPROP accx REAL
+   PARTICLEPROP accy REAL
+   PARTICLEPROP accz REAL 
+   PARTICLEPROP gtmp REAL
+   PARTICLEPROP gden REAL
+   PARTICLEPROP magx REAL
+   PARTICLEPROP magy REAL
+   PARTICLEPROP magz REAL
+   PARTICLEPROP chrg REAL
+   PARTICLEPROP vrel REAL
+   PARTICLEPROP dmdt REAL
+   PARTICLEPROP odmt REAL
+   REQUIRES Grid/GridParticles
+   REQUIRES Particles/ParticlesMain
+   REQUIRES Particles/ParticlesMain/active/dust_AB
+   REQUIRES Particles/ParticlesForces/shortRange/drag_AB
+   REQUESTS Particles/ParticlesMapping/Quadratic
+   REQUESTS IO/IOMain/
+   REQUIRES IO/IOParticles
+   D sim_nperclump     Number of grains per ejecta clump
+   PARAMETER sim_nperclump INTEGER 5
+   D sim_pmass    dust grain initial mass (g)
+   PARAMETER sim_pmass REAL 1.34E-14
+   D sim_pdens    dust grain material density (g/cm**3)
+   PARAMETER sim_pdens REAL 3.2
+   D sim_ptype    dust grain type (currently either 1 => C or 2 => Si)
+   PARAMETER sim_ptype INTEGER 2
+   # D sim_tpactive   dust grain activation time
+   D sim_pactive   boolean giving whether grains are active or not
+   PARAMETER sim_pactive BOOLEAN FALSE
+   PARAMETER smearLen INTEGER 1
+   PARAMETER sim_dustdata STRING "spspecies"
+   PARAMETER sim_yielddata STRING "solidptrs"
+   PARAMETER sim_yieldintdata STRING "sputtering_yield_intgrl.hdf5"
+   PARAMETER sim_chargedata STRING "grain_charge_tbl.dat"
+   PARAMETER sim_G0 REAL 1.0
+   PARAMETER sim_usetsput BOOLEAN TRUE
+   PARAMETER sim_useisput BOOLEAN TRUE
+ENDIF
+
+D sim_Eej      Explosion energy (distributed over 2^dimen central zones)
+PARAMETER sim_Eej    REAL    1.
+
+D sim_Mej      Ejecta mass
+PARAMETER sim_Mej    REAL    1.
+
+D sim_vej      Ejecta maximum velocity
+PARAMETER sim_vej    REAL    1.E8
+
+D sim_Rej      Ejecta initial ejecta radius
+PARAMETER sim_Rej    REAL    1.E18
+
+D sim_chi      Ratio of clump density to smooth ejecta density
+PARAMETER sim_chi    REAL    100.
+
+D sim_fcl      Volume filling factor of clumps
+PARAMETER sim_fcl    REAL    0.01
+
+D sim_ejpl     Power law for ejecta envelope
+PARAMETER sim_ejpl    INTEGER 9
+
+D sim_rcl      Clump radius
+PARAMETER sim_rcl     REAL    1.E16
+
+D sim_exptimesfile    Path of file with explosion parameters
+PARAMETER sim_exptimesfile  STRING  "explosion_params.txt"
+
+D sim_rhoCSM   Circumstellar mass density at current shock position
+PARAMETER sim_rhoCSM   REAL    1.E-23
+
+D sim_Rb       Current radius of forward shock (in pc)
+PARAMETER sim_Rb       REAL    2.5
+
+D sim_Mprog    Mass of the progenitor (in Msun)
+PARAMETER sim_Mprog    REAL    19.0
+
+D sim_Msh      Current mass of shocked CSM 
+PARAMETER sim_Msh      REAL    7.9
+
+D sim_rInit          Radial position of inner edge of grid (for 1D)
+PARAMETER sim_rInit        REAL    0.05
+
+D sim_rInject          Radial position of region of wind injection
+PARAMETER sim_rInject      REAL    0.01
+
+D   sim_vwind       speed of stellar wind (cm/s)
+PARAMETER sim_vwind    REAL 4.E7
+
+D   sim_MLR         mass loss rate of the star (g/s)
+PARAMETER sim_MLR      REAL 6.3E18
+
+D sim_pISM     Pressure of the ISM
+PARAMETER sim_pISM     REAL    1.E-12
+
+D sim_rhoISM   Density of the ISM
+PARAMETER sim_rhoISM   REAL    1.
+
+D sim_mubar   mean mass per particle in the ISM
+PARAMETER sim_mubar   REAL    2.15E-24
+
+D sim_nnh   ratio of total density to H density
+PARAMETER sim_nnh   REAL    1.1
+
+D sim_xctr            Explosion center coordinates
+PARAMETER sim_xctr          REAL    0.5
+
+D sim_yctr            Explosion center coordinates
+PARAMETER sim_yctr          REAL    0.5
+
+D sim_zctr            Explosion center coordinates
+PARAMETER sim_zctr          REAL    0.5
+
+D sim_nsubzones       Number of `sub-zones' in cells for applying 1d profile
+PARAMETER sim_nsubzones     INTEGER 7
+
+D   Bx0             Initial magnitude of Bx
+PARAMETER Bx0          REAL     1.
+
+D   By0             Initial magnitude of By
+PARAMETER By0          REAL     1.
+
+D   Bz0             Initial magnitude of Bz
+PARAMETER Bz0          REAL     1.
+
+D   killdivb        Logical for div B cleaning
+PARAMETER killdivb     BOOLEAN  TRUE
+
+D   sim_SNoutint    output time interval after the SN explosion
+PARAMETER sim_SNoutint   REAL   3.15569E8

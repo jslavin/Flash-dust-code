@@ -66,6 +66,7 @@
 #define LEAPFROG        366
 #define LEAPFROG_COSMO  367
 #define DUST            368
+#define DUST_AB         369
 
 #define EULER_TRA       398
 #define RUNGEKUTTA      395

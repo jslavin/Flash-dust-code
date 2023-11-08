@@ -153,6 +153,9 @@ subroutine Particles_advance (dtOld,dtNew)
      case(DPD)
         call pt_advanceDPD(dtOld,dtNew,particles(:,p_begin:p_end),&
              p_count, i)
+     case(DUST_AB)
+        call pt_advanceDust_AB(dtOld,dtNew,particles(:,p_begin:p_end),&
+             p_count, i)
      case(DUST)
         call pt_advanceDust(dtOld,dtNew,particles(:,p_begin:p_end),&
              p_count, i)

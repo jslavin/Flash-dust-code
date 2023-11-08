@@ -1,0 +1,27 @@
+  2.20 1.8e+05  1.9   6.4e+11  5.8e+12  2.3e+06   4.    12.     6.      .61
+  2.65 5.0e+05  1.23  4.8e+11  5.4e+12  1.9e+06   6.0   20.    10.      .1
+  1.   2.0e+05  1.4   5.4e+10  9.2e+10  6.5e+05    .53  18.    10.      .1
+  3.1  7.7e+05  1.1   8.1e+11  8.6e+12  2.5e+06   6.3   20.    10.      .2
+  7.9  4.1e+05  1.5   1.4e+11  5.2e+12  1.1e+06   4.1   56.    26.      .35
+  3.2  7.8e+05  1.4   1.2e+12  7.2e+12  3.1e+06   4.    12.     6.      .65
+
+# Sputtering parameters for grains (originally for use with Ant Jones' grash 
+# code)
+# rows: Carbonaceous (graphite-like), Silicate, ice, SiC, Fe, diamond
+# columns: 
+#    1) solid grain mass density (g/cm^3), 
+#    2) sound speed in the solid (cm/s),
+#    3) s parameter, 
+#    4) vaporization energy density (erg/g), 
+#    5) vaporization threshold pressure (dyne/cm^2), 
+#    6) vaporization threshold velocity (cm/s),
+#    7) surface binding energy (U0) (eV), 
+#    8) sputtered species atom mass (msput) (amu), 
+#    9) sputtered species atom no.,
+#    10) sputtering K factor
+#
+# Altered slightly (5/9/2019) to use parameters from Micelotta et al. (2019) 
+# for C and silicate dust - which are from Nozawa et al. (2016) 
+# Note: Micellotta et al. list separately M and msp where the first is the 
+# atomic mass of the dust and msp is the average mass of sputtered atoms
+# For MgSiO3, M = 20 and msp = 23

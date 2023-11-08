@@ -158,9 +158,9 @@ subroutine InitSingleParticle(p, xpos, ypos, zpos, xvel, yvel, zvel, &
   particles(VREL_PART_PROP,p) = 0.
   ! New values - now storing the gas velocity as well as the relative velocity
   ! Dummy value here
-  particles(GVLX_PART_PROP,p) = 0.
-  particles(GVLY_PART_PROP,p) = 0.
-  particles(GVLZ_PART_PROP,p) = 0.
+  particles(GVLX_PART_PROP,p) = xvel
+  particles(GVLY_PART_PROP,p) = yvel
+  particles(GVLZ_PART_PROP,p) = zvel
   particles(DMDT_PART_PROP,p) = 0.
   particles(ODMT_PART_PROP,p) = 0.
   ! Dummy values - should get updated at the next step

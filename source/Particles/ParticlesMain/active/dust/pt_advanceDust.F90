@@ -34,7 +34,7 @@
 
 subroutine pt_advanceDust(dtOld,dtNew,particles,p_count,ind)
 
-  use Simulation_data, only : sim_pactive
+  use Simulation_data, only : sim_pactive, sim_usedrag
   use Driver_interface, only : Driver_getSimTime
   use Driver_data, only : dr_dtInit
   use Particles_data, only: useParticles, pt_restart, pt_meshMe, &
@@ -160,14 +160,21 @@ subroutine pt_advanceDust(dtOld,dtNew,particles,p_count,ind)
               Bp = particles(MAGZ_PART_PROP,i)
               Bx = Br*cos(p1) - Bp*sin(p1)
               By = Br*sin(p1) + Bp*cos(p1)
-              ! transform to frame of the plasma
-              vx1 = vx0 - vgx
-              vy1 = vy0 - vgy
-              vz1 = vz0 - vgz
               ! This is now just drag in cartesian coords
               accx = particles(ACCX_PART_PROP,i)
               accy = particles(ACCY_PART_PROP,i)
               accz = particles(ACCZ_PART_PROP,i)
+              ! apply drag in operator split fashion
+              if(sim_usedrag) then
+                  vx1 = vx0 + accx*dtN
+                  vy1 = vy0 + accy*dtN
+                  vz1 = vz0 + accz*dtN
+              endif
+              ! transform to frame of the plasma
+              vx1 = vx1 - vgx
+              vy1 = vy1 - vgy
+              vz1 = vz1 - vgz
+
               vxp = vx1 + (vy1*Bz/Btot - vz1*By/Btot)*tanom
               vyp = vy1 + (vz1*Bx/Btot - vx1*Bz/Btot)*tanom
               vzp = vz1 + (vx1*By/Btot - vy1*Bx/Btot)*tanom
@@ -179,9 +186,11 @@ subroutine pt_advanceDust(dtOld,dtNew,particles,p_count,ind)
               vy2 = vy2 + vgy
               vz2 = vz2 + vgz
               ! apply drag in operator split fashion
-              vx2 = vx2 + accx*dtN
-              vy2 = vy2 + accy*dtN
-              vz2 = vz2 + accz*dtN
+              !if(sim_usedrag) then
+              !    vx2 = vx2 + accx*dtN
+              !    vy2 = vy2 + accy*dtN
+              !    vz2 = vz2 + accz*dtN
+              !endif
               x2 = x1 + dtN/2.*(vx2 + vx0)
               y2 = y1 + dtN/2.*(vy2 + vy0)
               z2 = z1 + dtN/2.*(vz2 + vz0)

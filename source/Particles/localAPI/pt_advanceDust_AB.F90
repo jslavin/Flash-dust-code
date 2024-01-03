@@ -6,7 +6,7 @@
 !!
 !! SYNOPSIS
 !!
-!!  call pt_advanceDust(real(in)    :: dtold,
+!!  call pt_advanceDust_AB(real(in)    :: dtold,
 !!                      real(in)    :: dtnew,
 !!                      real(inout) :: particles(NPART_PROPS,p_count),
 !!                      integer(in) :: p_count,

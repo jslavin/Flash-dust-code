@@ -101,7 +101,6 @@ subroutine pt_advanceDust_AB(dtOld,dtNew,particles,p_count,ind)
 
   call Timers_start ("move particles")
 
-  !if(t > sim_tpactive) then
   pdiag = .false.
   dtN = dtNew
   if(sim_pactive) then

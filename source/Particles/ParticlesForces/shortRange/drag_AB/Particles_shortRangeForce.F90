@@ -32,7 +32,7 @@ subroutine Particles_shortRangeForce(particles,p_count,mapType)
   use Grid_interface, ONLY : Grid_mapMeshToParticles
   use Particles_data, ONLY : pt_posAttrib,pt_geometry
   use Simulation_data, ONLY : sim_mubar, sim_nnh, sim_usetsput, sim_useisput, &
-      sim_ptype, sim_pactive, sim_smallT
+      sim_usedrag, sim_ptype, sim_pactive, sim_smallT
   use pt_chargeData
   use PhysicalConstants_interface, ONLY : PhysicalConstants_get
   use Eos_data, ONLY : eos_singleSpeciesA
@@ -184,9 +184,15 @@ subroutine Particles_shortRangeForce(particles,p_count,mapType)
       gam = 1./sqrt(1. - (vtot/c)**2)
       afac = -PI*prad*prad*gdens*Gfac/pmass
       if(pt_geometry == CYLINDRICAL) then
-          accr = (vxrel*afac + EMACCX)/gam
-          accz = (vyrel*afac + EMACCY)/gam
-          accp = (vzrel*afac + EMACCZ)/gam
+          if(sim_usedrag) then
+              accr = (vxrel*afac + EMACCX)/gam
+              accz = (vyrel*afac + EMACCY)/gam
+              accp = (vzrel*afac + EMACCZ)/gam
+          else
+              accr = EMACCX/gam
+              accz = EMACCY/gam
+              accp = EMACCZ/gam
+          endif
           phang = particles(POSZ_PART_PROP,i)
           ! These accelerations are in cartesian coordinates
           particles(ACCX_PART_PROP,i) = (accr - r*vp**2)*cos(phang) - &
@@ -206,11 +212,11 @@ subroutine Particles_shortRangeForce(particles,p_count,mapType)
       ! so if we wanted to add a per particle type would need to give it as 
       ! a real value. Instead here we're using a global value sim_ptype.
       ptype = sim_ptype 
+      particles(VREL_PART_PROP,i) = vrel
       if(.not.sim_usetsput) gtemp = 1.E3
       if(.not.sim_useisput) vrel = 1.E6
       call pt_sputrate(vrel,prad,hdens,gtemp,ptype,dmgdt)
       particles(DMDT_PART_PROP,i) = -dmgdt
-      particles(VREL_PART_PROP,i) = vrel
   enddo
   return
 end subroutine Particles_shortRangeForce

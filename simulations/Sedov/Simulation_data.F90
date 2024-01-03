@@ -64,8 +64,8 @@ module Simulation_data
   real, save :: sim_zMax, pCoreFac, pCorePL
   integer, save :: sim_nSubZones
   character(len=80), save :: sim_dustdata, sim_yielddata, sim_yieldintdata, &
-      sim_chargedata
-  logical, save :: sim_usetsput, sim_useisput
+      sim_chargedata, sim_clumpdata, sim_partdata
+  logical, save :: sim_usetsput, sim_useisput, sim_usedrag, sim_readparts
 
   !! *** Variables pertaining to this Simulation *** !!
 

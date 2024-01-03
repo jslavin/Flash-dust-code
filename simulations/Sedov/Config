@@ -7,6 +7,8 @@ REQUIRES physics/Hydro
 REQUIRES physics/Eos
 REQUIRES physics/Eos/EosMain/Gamma
 REQUIRES physics/materialProperties/Conductivity/ConductivityMain/PowerLaw
+REQUIRES physics/sourceTerms/Cool/CoolMain/CloudyJDS
+REQUIRES physics/sourceTerms/Heat/HeatMain/SNexp
 REQUESTS physics/Diffuse/DiffuseMain/Unsplit
 
 # if we want to use particles then we must specify "withParticles=True" as an
@@ -59,6 +61,7 @@ IF withParticles
    PARAMETER sim_G0 REAL 1.0
    PARAMETER sim_usetsput BOOLEAN TRUE
    PARAMETER sim_useisput BOOLEAN TRUE
+   PARAMETER sim_usedrag BOOLEAN TRUE
 ENDIF
 
 D sim_Eej      Explosion energy (distributed over 2^dimen central zones)
@@ -150,3 +153,12 @@ PARAMETER killdivb     BOOLEAN  TRUE
 
 D   sim_SNoutint    output time interval after the SN explosion
 PARAMETER sim_SNoutint   REAL   3.15569E8
+
+D   sim_readparts   switch for whether to read in particle/clump data
+PARAMETER sim_readparts  BOOLEAN  FALSE
+
+D   sim_partdata    file containing initial particle data
+PARAMETER sim_partdata STRING "parts_init.txt"
+
+D   sim_clumpdata    file containing initial clump positions
+PARAMETER sim_clumpdata STRING "ejecta_clumps.txt"

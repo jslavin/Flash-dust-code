@@ -46,7 +46,7 @@ subroutine Heat(blkcnt, blklst, dt, time)
       pCoreFac, pCorePL, sim_Bx0, sim_By0, sim_Bz0, &
       sim_killdivb, texp, xexp, yexp, zexp, nexps, exploded, &
       xpart,ypart,zpart,vxpart,vypart,vzpart,npart,sim_pISM,sim_SNoutint, &
-      sim_pactive
+      sim_pactive, sim_readparts
   use IO_interface, ONLY : IO_writeCheckpoint
   use Driver_data, ONLY : dr_dtInit, dr_nstep
   use IO_data, ONLY : IO_plotFileIntervalTime
@@ -98,7 +98,11 @@ subroutine Heat(blkcnt, blklst, dt, time)
   endif
   if(iexp > 0) then
       writeout = .true. ! write out clump/particle data
-      call gen_clumps(Ncl,xcl,ycl,zcl,clrad,clrho,writeout)
+      if(sim_readparts) then
+          call read_clumps(xcl, ycl, zcl, clrad, clrho)
+      else
+          call gen_clumps(Ncl,xcl,ycl,zcl,clrad,clrho,writeout)
+      endif
       call IO_writeCheckpoint()
       ! Not sure if restart should be false or true here
       !call Particles_init(restart)

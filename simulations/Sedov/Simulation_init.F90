@@ -76,10 +76,8 @@ subroutine Simulation_init()
   real :: rp, thetap, phip, rpart, vpart
   real :: cmpc = 3.08568E18
   integer :: NN, Ncl, nin, i, j, np
-  integer, dimension(2) :: rseed
   logical :: ovlp, writeout
   real, allocatable :: x_try(:), y_try(:), z_try(:)
-  data rseed/3,10/
 !!*****************************************************************************
 
   call Driver_getMype(GLOBAL_COMM, sim_meshMe)
@@ -101,9 +99,13 @@ subroutine Simulation_init()
       call RuntimeParameters_get('sim_yieldintdata', sim_yieldintdata)
       call RuntimeParameters_get('sim_usetsput', sim_usetsput)
       call RuntimeParameters_get('sim_useisput', sim_useisput)
+      call RuntimeParameters_get('sim_usedrag', sim_usedrag)
       call RuntimeParameters_get('sim_chargedata', sim_chargedata)
       call RuntimeParameters_get('sim_G0', sim_G0)
+      call RuntimeParameters_get('sim_partdata', sim_partdata)
+      call RuntimeParameters_get('sim_readparts', sim_readparts)
   endif
+  call RuntimeParameters_get('sim_clumpdata', sim_clumpdata)
   call RuntimeParameters_get('sim_ejpl', sim_ejpl)
   call RuntimeParameters_get('sim_rcl', sim_rcl)
   call RuntimeParameters_get('sim_rhoCSM', sim_rhoCSM)
@@ -227,7 +229,11 @@ subroutine Simulation_init()
   ! Now not using particles in first explosion
   sim_pactive = .false.
   writeout = .false. ! don't write out clump/particle data yet
-  call gen_clumps(Ncl,xcl,ycl,zcl,clrad,clrho,writeout)
+  if(sim_readparts) then
+      call read_clumps(xcl, ycl, zcl, clrad, clrho)
+  else
+      call gen_clumps(Ncl,xcl,ycl,zcl,clrad,clrho,writeout)
+  endif
   if(useParticles) then
       call pt_yieldInit(trim(sim_dustdata),trim(sim_yielddata), &
         trim(sim_yieldintdata))
@@ -312,6 +318,7 @@ subroutine gen_clumps(Ncl,xcl,ycl,zcl,clrad,clrho,writeout)
     allocate(y_try(Ncl))
     allocate(z_try(Ncl))
     nin = 0
+    ! gfortran requires 33 seeds for reproducibility
     rseed(1) = 3
     rseed(2) = 10
     call random_seed(PUT=rseed)
@@ -343,7 +350,7 @@ subroutine gen_clumps(Ncl,xcl,ycl,zcl,clrad,clrho,writeout)
             y_try(nin) = yy
         endif
     enddo
-!!Allocate the position and radius variables.
+    !!Allocate the position and radius variables.
     np = 0
     NN = 0
     if((sim_meshMe == MASTER_PE).and.(writeout)) then
@@ -435,3 +442,65 @@ subroutine gen_clumps(Ncl,xcl,ycl,zcl,clrad,clrho,writeout)
     deallocate(z_try)
 
 end subroutine gen_clumps
+
+subroutine read_clumps(xcl, ycl, zcl, clrad, clrho)
+    !! Reads in clump positions within the smooth ejecta of the core
+    !! Also reads in particle positions
+
+    use Simulation_data, ONLY: sim_nperclump, xpart, ypart, zpart, &
+        vxpart, vypart, vzpart, sim_ncl, npart, sim_clmax, sim_mubar, &
+        sim_clumpdata, sim_partdata, sim_meshMe
+
+    implicit none
+
+#include "constants.h"
+#include "Flash.h"
+
+    real, dimension(sim_clmax) :: xcl, ycl, zcl, clrad, clrho
+    real :: cmpc = 3.08568E18
+    integer :: i, j, np, NN, stat
+
+    call Driver_getMype(GLOBAL_COMM, sim_meshMe)
+
+    open(unit=30,file=trim(sim_clumpdata),status='old')
+    ! First three lines are comments
+    read(30,*)
+    read(30,*)
+    read(30,*)
+    open(unit=31,file=trim(sim_partdata),status='old')
+    ! First two lines are comments
+    read(31,*)
+    read(31,*)
+    np = 0
+    NN = 0
+    do i=1,sim_clmax
+        read(30,fmt='(F10.4,F10.4,F10.4,F10.4,F10.2)',iostat=stat) xcl(i), &
+                ycl(i), zcl(i), clrad(i), clrho(i)
+        if(stat == -1) exit
+        NN = NN + 1
+        xcl(i) = xcl(i)*cmpc
+        ycl(i) = ycl(i)*cmpc
+        zcl(i) = zcl(i)*cmpc
+        clrad(i) = clrad(i)*cmpc
+        clrho(i) = clrho(i)*sim_mubar
+        do j=1,sim_nperclump
+            np = np + 1
+            read(31,fmt='(F10.4,F10.4,ES12.4,ES12.4)') &
+               xpart(np), ypart(np), vxpart(np), vypart(np)
+            xpart(np) = xpart(np)*cmpc
+            ypart(np) = ypart(np)*cmpc
+            vxpart(np) = vxpart(np)*1.E5
+            vypart(np) = vypart(np)*1.E5
+        enddo
+    enddo
+    zpart(:) = 0.
+    vzpart(:) = 0.
+    close(30)
+    close(31)
+    sim_ncl = NN
+    npart = np
+    if(sim_meshMe == MASTER_PE) then
+        write(*,'("clumps and particles read in, sim_ncl =",i4,' &
+            // '" npart =",i4)') sim_ncl,npart
+    endif
+end subroutine read_clumps

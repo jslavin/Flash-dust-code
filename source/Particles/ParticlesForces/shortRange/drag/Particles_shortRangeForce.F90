@@ -57,9 +57,9 @@ subroutine Particles_shortRangeForce(particles,p_count,mapType)
   integer,dimension(2,numAttrib) :: attrib
   integer :: i, ptype, itbl
   real :: pmass, prad, vxrel, vyrel, vzrel, vrel, gdens, Gfac, gtemp, Tfac, &
-      afac, Tconv, dmgdt, dens, hdens, ke2, ec, EMACCX, EMACCY, EMACCZ, Z, &
-      phi, e, c, kB, Na, vx, vy, vz, phimax, phimin, accr, accp, accz, &
-      phang, logchiT, logT, dene, edens, dlgT, gam, r, vp, vr, vtot
+      afac, Tconv, dmgdt, dens, hdens, ke2, ec, Z, phi, e, c, kB, Na, &
+      vx, vy, vz, phimax, phimin, phang, logchiT, logT, dene, edens, dlgT, &
+      gam, r, vp, vr, vtot, vxg, vyg, vzg
 
   call PhysicalConstants_get("electron charge",e)
   call PhysicalConstants_get("Boltzmann",kB)
@@ -87,13 +87,13 @@ subroutine Particles_shortRangeForce(particles,p_count,mapType)
   attrib(PART_DS_IND,8) = MAGZ_PART_PROP
   tmpparts = particles
   ! To avoid any problems in mapping for 1D runs
-  if(NDIM < 3) then
-      tmpparts(POSZ_PART_PROP,:) = 0.
-      if(NDIM < 2) then
-          tmpparts(POSY_PART_PROP,:) = 0.
-      endif
-  endif
-  call Grid_mapMeshToParticles(tmpparts,part_props, BLK_PART_PROP, &
+  !if(NDIM < 3) then
+  !    tmpparts(POSZ_PART_PROP,:) = 0.
+  !    if(NDIM < 2) then
+  !        tmpparts(POSY_PART_PROP,:) = 0.
+  !    endif
+  !endif
+  call Grid_mapMeshToParticles(tmpparts, part_props, BLK_PART_PROP, &
       p_count, pt_posAttrib, numAttrib, attrib, mapType)
   do i = 1, p_count
       pmass = particles(MASS_PART_PROP,i)
@@ -116,25 +116,17 @@ subroutine Particles_shortRangeForce(particles,p_count,mapType)
       ! a different grain type if desired.
 
       prad = (3.*pmass/(4.*PI*particles(DENS_PART_PROP,i)))**(1./3.)
-      vx = particles(VELX_PART_PROP,i)
-      vy = particles(VELY_PART_PROP,i)
-      vz = particles(VELZ_PART_PROP,i)
-      vxrel = vx - tmpparts(VELX_PART_PROP,i)
       particles(GVLX_PART_PROP,i) = tmpparts(VELX_PART_PROP,i)
       if(NDIM > 1) then
-          vyrel = vy - tmpparts(VELY_PART_PROP,i)
           particles(GVLY_PART_PROP,i) = tmpparts(VELY_PART_PROP,i)
       else
-          vyrel = vy
           particles(GVLY_PART_PROP,i) = 0.
       endif
       ! If using cylindrical symmetry we assume VELZ_VAR holds the
       ! gas angular velocity in phi direction in radians/s (vphi = dphi/dt)
       if(NDIM > 2) then
-          vzrel = vz - tmpparts(VELZ_PART_PROP,i)
           particles(GVLZ_PART_PROP,i) = tmpparts(VELZ_PART_PROP,i)
       else
-          vzrel = vz
           particles(GVLZ_PART_PROP,i) = 0.
       endif
       gdens = tmpparts(GDEN_PART_PROP,i)
@@ -143,10 +135,36 @@ subroutine Particles_shortRangeForce(particles,p_count,mapType)
       edens = dene*dens
       if(pt_geometry == CYLINDRICAL) then
           r = particles(POSX_PART_PROP,i)
+          vr = particles(VELX_PART_PROP,i) 
+          vp =  particles(VELZ_PART_PROP,i)
           ! needed because vzrel is angular speed
-          vrel = sqrt(vxrel**2 + vyrel**2 + (vzrel*r)**2)
-      else
+          ! here we transform to cartesian coordinates to calculate accelerations
+          ! note that vp = dphi/dt, accp = d^2(phi)/dt^2
+          phang = particles(POSZ_PART_PROP,i)
+          vx = vr*cos(phang) - vp*r*sin(phang)
+          vxg = particles(GVLX_PART_PROP,i)*cos(phang) - &
+              particles(GVLZ_PART_PROP,i)*r*sin(phang)
+          vxrel = vx - vxg
+          vy = vr*sin(phang) + vp*r*cos(phang)
+          vyg = particles(GVLX_PART_PROP,i)*sin(phang) + &
+              particles(GVLZ_PART_PROP,i)*r*cos(phang)
+          vyrel = vy - vyg
+          vz = particles(VELY_PART_PROP,i)
+          vzrel = vz - particles(GVLY_PART_PROP,i)
           vrel = sqrt(vxrel**2 + vyrel**2 + vzrel**2)
+          vtot = sqrt(vx**2 + vy**2 + vz**2)
+      else
+          vx = particles(VELX_PART_PROP,i)
+          vy = particles(VELY_PART_PROP,i)
+          vz = particles(VELZ_PART_PROP,i)
+          vxg = particles(GVLX_PART_PROP,i)
+          vyg = particles(GVLY_PART_PROP,i)
+          vzg = particles(GVLZ_PART_PROP,i)
+          vxrel = vx - vxg
+          vyrel = vy - vyg
+          vzrel = vz - vzg
+          vrel = sqrt(vxrel**2 + vyrel**2 + vzrel**2)
+          vtot = sqrt(vx**2 + vy**2 + vz**2)
       endif
       call pt_grain_pot(edens,gtemp,vrel,sim_ptype,phi)
       ! phi = Z*e^2/akT
@@ -157,14 +175,6 @@ subroutine Particles_shortRangeForce(particles,p_count,mapType)
       phi = min(max(phi,phimin),phimax)
       Z = phi*prad*gtemp*ke2
       particles(CHRG_PART_PROP,i) = Z
-      vr = vx ! assumes cylindrical symmetry
-      ! we assume particles(VELZ_PART_PROP) = d(phi)/dt
-      vp = vz ! assumes cylindrical symmetry
-      if(pt_geometry == CYLINDRICAL) then
-          vtot = sqrt(vx**2 + vy**2 + (vp*r)**2)
-      else
-          vtot = sqrt(vx**2 + vy**2 + vz**2)
-      endif
       ! Now incorporating vrel into Gfac so no danger of divide by 0
       Gfac = sqrt(vrel**2 + Tfac*max(min(gtemp,1.E8),10.))
       ! Note: this now includes the thermal part of the drag (see McKee et al.
@@ -173,32 +183,18 @@ subroutine Particles_shortRangeForce(particles,p_count,mapType)
       afac = -PI*prad*prad*gdens*Gfac/pmass
       ! accelerations now only include the drag - Lorentz force is incorporated
       ! into Particles_advance
-      if(pt_geometry == CYLINDRICAL) then
-          accr = vxrel*afac/gam
-          accz = vyrel*afac/gam
-          accp = vzrel*afac/gam
-          phang = particles(POSZ_PART_PROP,i)
-          ! here we transform to cartesian coordinates
-          ! note that vp = dphi/dt, accp = d^2(phi)/dt^2
-          particles(ACCX_PART_PROP,i) = (accr - r*vp**2)*cos(phang) - &
-              (r*accp + 2.*vr*vp)*sin(phang)
-          particles(ACCY_PART_PROP,i) = (accr - r*vp**2)*sin(phang) + &
-              (r*accp + 2.*vr*vp)*cos(phang)
-          particles(ACCZ_PART_PROP,i) = accz
-      else
-          particles(ACCX_PART_PROP,i) = vxrel*afac/gam
-          particles(ACCY_PART_PROP,i) = vyrel*afac/gam
-          particles(ACCZ_PART_PROP,i) = vzrel*afac/gam
-      endif
+      particles(ACCX_PART_PROP,i) = vxrel*afac/gam
+      particles(ACCY_PART_PROP,i) = vyrel*afac/gam
+      particles(ACCZ_PART_PROP,i) = vzrel*afac/gam
       ! Currently integer values for particle properties are not supported, 
       ! so if we wanted to add a per particle type would need to give it as 
       ! a real value. Instead here we're using a global value sim_ptype.
       ptype = sim_ptype 
+      particles(VREL_PART_PROP,i) = vrel
       if(.not.sim_usetsput) gtemp = 1.E3
       if(.not.sim_useisput) vrel = 1.E6
       call pt_sputrate(vrel,prad,hdens,gtemp,ptype,dmgdt)
       particles(DMDT_PART_PROP,i) = -dmgdt
-      particles(VREL_PART_PROP,i) = vrel
   enddo
   return
 end subroutine Particles_shortRangeForce

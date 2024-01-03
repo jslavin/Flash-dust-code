@@ -141,7 +141,8 @@ subroutine Particles_computeDt (blockID, dt_part, dt_minloc)
         
         dtnew = pt_dtFactor * min(dtx, dty, dtz)
         !! keep timestep below 0.01*(gyro time)
-        dtnew = min(dtnew, 0.01*tgyro)
+        !! (1/3/2024) try increasing time constraint by 10
+        dtnew = min(dtnew, 0.1*tgyro)
         if (dtnew < dt_part) then
            dt_part = dtnew
            !! information about where the minimum restriction took place

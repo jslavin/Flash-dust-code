@@ -106,15 +106,17 @@ subroutine Particles_computeDt (blockID, dt_part, dt_minloc)
         !! calculate the time needed to move a particle through the block
         !!      in each direction:  blocksize / particle velocity
         
-        pmass = particles(MASS_PART_PROP,i)
-        Btot = sqrt(particles(MAGX_PART_PROP,i)**2 + &
-            particles(MAGY_PART_PROP,i)**2 + particles(MAGZ_PART_PROP,i)**2)
-        charge = abs(particles(CHRG_PART_PROP,i))
-        if((charge.eq.0.).or.(Btot.eq.0.)) then
-            tgyro = HUGE(1.0)
-        else
-            tgyro = 2.*PI*pmass/(ec*charge*Btot)
-        endif
+        !!! Turning gyro period constraint off
+        !!  Turn super timestepping on
+        !pmass = particles(MASS_PART_PROP,i)
+        !Btot = sqrt(particles(MAGX_PART_PROP,i)**2 + &
+        !    particles(MAGY_PART_PROP,i)**2 + particles(MAGZ_PART_PROP,i)**2)
+        !charge = abs(particles(CHRG_PART_PROP,i))
+        !if((charge.eq.0.).or.(Btot.eq.0.)) then
+        !    tgyro = HUGE(1.0)
+        !else
+        !    tgyro = 2.*PI*pmass/(ec*charge*Btot)
+        !endif
 
         velxabs = abs(particles(VELX_PART_PROP,i))
         if (velxabs > pt_small) then
@@ -140,9 +142,10 @@ subroutine Particles_computeDt (blockID, dt_part, dt_minloc)
         !! decrease by the restraining factor
         
         dtnew = pt_dtFactor * min(dtx, dty, dtz)
-        !! keep timestep below 0.01*(gyro time)
-        !! (1/3/2024) try increasing time constraint by 10
-        dtnew = min(dtnew, 0.1*tgyro)
+        !! keep timestep below 0.025*(gyro time)
+        !! (1/4/2024) factor of 0.025 appears to be adequate for accuracy
+        !! previous factor of 0.01 was smaller than necessary
+        !dtnew = min(dtnew, 0.025*tgyro)
         if (dtnew < dt_part) then
            dt_part = dtnew
            !! information about where the minimum restriction took place
@@ -157,8 +160,7 @@ subroutine Particles_computeDt (blockID, dt_part, dt_minloc)
      endif
      
   enddo
-  !if(time < sim_tpactive) dt_part = HUGE(1.0) !dt_part*1.E6
-  if(.not. sim_pactive) dt_part = HUGE(1.0) !dt_part*1.E6
+  if(.not. sim_pactive) dt_part = HUGE(1.0)
   !
   !============================================================================
   call Particles_sinkComputeDt(blockID,dt_part,dt_minloc)

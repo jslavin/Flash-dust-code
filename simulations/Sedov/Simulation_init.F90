@@ -230,7 +230,7 @@ subroutine Simulation_init()
   sim_pactive = .false.
   writeout = .false. ! don't write out clump/particle data yet
   if(sim_readparts) then
-      call read_clumps(xcl, ycl, zcl, clrad, clrho)
+      call read_clumps(xcl, ycl, zcl, clrad, clrho, writeout)
   else
       call gen_clumps(Ncl,xcl,ycl,zcl,clrad,clrho,writeout)
   endif
@@ -443,14 +443,17 @@ subroutine gen_clumps(Ncl,xcl,ycl,zcl,clrad,clrho,writeout)
 
 end subroutine gen_clumps
 
-subroutine read_clumps(xcl, ycl, zcl, clrad, clrho)
+subroutine read_clumps(xcl, ycl, zcl, clrad, clrho, writeout)
     !! Reads in clump positions within the smooth ejecta of the core
     !! Also reads in particle positions
+    !! Requires that sim_fcl, cloud filling factor, be the same in this
+    !! run as in the run from which the clump data file was generated
 
     use Simulation_data, ONLY: sim_nperclump, xpart, ypart, zpart, &
         vxpart, vypart, vzpart, sim_ncl, npart, sim_clmax, sim_mubar, &
-        sim_clumpdata, sim_partdata, sim_meshMe
-
+        sim_clumpdata, sim_partdata, sim_meshMe, sim_rhocl
+    use Driver_interface, ONLY: Driver_getMype
+    
     implicit none
 
 #include "constants.h"
@@ -459,6 +462,7 @@ subroutine read_clumps(xcl, ycl, zcl, clrad, clrho)
     real, dimension(sim_clmax) :: xcl, ycl, zcl, clrad, clrho
     real :: cmpc = 3.08568E18
     integer :: i, j, np, NN, stat
+    logical :: writeout
 
     call Driver_getMype(GLOBAL_COMM, sim_meshMe)
 
@@ -473,20 +477,42 @@ subroutine read_clumps(xcl, ycl, zcl, clrad, clrho)
     read(31,*)
     np = 0
     NN = 0
+    if((sim_meshMe == MASTER_PE).and.(writeout)) then
+        !!! Note that we write out (almost) just what we read in - input files
+        !!! are in different location than output files
+        !!! density in clumps may be different in output than input
+        open(unit=32,file='ejecta_clumps.txt',status='unknown',access='append')
+        write(32,fmt='("# Clumpy ejecta distribution")')
+        write(32,fmt='("# Clump filling factor =",F7.4)') sim_fcl
+        write(32,fmt='("#",A7,A10,A10,A10,A10)') 'x','y','z','rcl','rhocl'
+        open(unit=33,file='parts_init.txt',status='unknown',access='append')
+        write(33,fmt='("# Initial particle data")')
+        write(33,fmt='("#",A7,A10,A12,A12)') 'x','y','vx','vy'
+    endif
     do i=1,sim_clmax
         read(30,fmt='(F10.4,F10.4,F10.4,F10.4,F10.2)',iostat=stat) xcl(i), &
                 ycl(i), zcl(i), clrad(i), clrho(i)
         if(stat == -1) exit
+        if((sim_meshMe == MASTER_PE).and.(writeout)) then
+            write(32,fmt='(F10.4,F10.4,F10.4,F10.4,F10.2)') xcl(i), &
+                ycl(i),zcl(i),clrad(i),clrho(i)
+        endif
         NN = NN + 1
         xcl(i) = xcl(i)*cmpc
         ycl(i) = ycl(i)*cmpc
         zcl(i) = zcl(i)*cmpc
         clrad(i) = clrad(i)*cmpc
-        clrho(i) = clrho(i)*sim_mubar
+        ! override the read-in density - allows different density clumps with
+        ! the same spatial distribution
+        clrho(i) = sim_rhocl ! clrho(i)*sim_mubar
         do j=1,sim_nperclump
             np = np + 1
             read(31,fmt='(F10.4,F10.4,ES12.4,ES12.4)') &
                xpart(np), ypart(np), vxpart(np), vypart(np)
+            if((sim_meshMe == MASTER_PE).and.(writeout)) then
+                write(33,fmt='(F10.4,F10.4,ES12.4,ES12.4)') &
+                    xpart(np), ypart(np), vxpart(np), vypart(np)
+            endif
             xpart(np) = xpart(np)*cmpc
             ypart(np) = ypart(np)*cmpc
             vxpart(np) = vxpart(np)*1.E5

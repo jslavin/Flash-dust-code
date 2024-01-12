@@ -99,9 +99,9 @@ subroutine Heat(blkcnt, blklst, dt, time)
   if(iexp > 0) then
       writeout = .true. ! write out clump/particle data
       if(sim_readparts) then
-          call read_clumps(xcl, ycl, zcl, clrad, clrho)
+          call read_clumps(xcl, ycl, zcl, clrad, clrho, writeout)
       else
-          call gen_clumps(Ncl,xcl,ycl,zcl,clrad,clrho,writeout)
+          call gen_clumps(Ncl, xcl, ycl, zcl, clrad, clrho, writeout)
       endif
       call IO_writeCheckpoint()
       ! Not sure if restart should be false or true here

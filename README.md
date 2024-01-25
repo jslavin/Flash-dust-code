@@ -1,0 +1,1 @@
+This code is designed to be used with the numerical magneto-hydrodynamics code FLASH (https://flash.rochester.edu/site/flashcode/). The extra routines allow for the calculation of the evolution of interstellar dust, especially in supernova remnants.
